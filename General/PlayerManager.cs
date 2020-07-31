@@ -9,6 +9,7 @@ using Photon.Realtime;
 using System.Security.Cryptography;
 using UnityEngine.UI;
 using System.Linq.Expressions;
+using UnityEngine.SceneManagement;
 
 abstract public class PlayerManager : StateMachine, IAttackable, ITerrain {
 
@@ -767,6 +768,10 @@ abstract public class PlayerManager : StateMachine, IAttackable, ITerrain {
     public void GainHealthRPC(int x) {
         playerInfo.health = Mathf.Min(playerInfo.health + x, playerInfo.maxHp);
         UpdateAHBText();
+
+        if (playerInfo.health <= 0) {
+            StartCoroutine("Die");
+        }
     }
 
     public void GainHealth(int x) {
@@ -777,11 +782,35 @@ abstract public class PlayerManager : StateMachine, IAttackable, ITerrain {
     public void SetHealthRPC(int x) {
         playerInfo.health = x;
         UpdateAHBText();
+
+        if (playerInfo.health <= 0) {
+            StartCoroutine("Die");
+        }
     }
     public void SetHealth(int x) {
         photonView.RPC("SetHealthRPC", RpcTarget.All, x);
     }
     //</health>---------------
+
+    private IEnumerator Die() {
+        yield return new WaitForSeconds(2f);
+
+        //Time.timeScale = 1f;
+        bool ismine = photonView.IsMine;
+        if (ismine) {
+            photonView.RPC("WinRPC", RpcTarget.Others);
+            PhotonNetwork.LeaveLobby();
+            PhotonNetwork.LeaveRoom();
+            SceneManager.LoadScene("Lose_Online");
+        }
+    }
+
+    [PunRPC]
+    public void WinRPC() {
+        PhotonNetwork.LeaveLobby();
+        PhotonNetwork.LeaveRoom();
+        SceneManager.LoadScene("Win_Online");
+    }
 
     //<block>-------------
     [PunRPC]
